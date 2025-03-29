@@ -1,0 +1,41 @@
+{
+  "name": "@nexirift/better-auth-plugins",
+  "version": "0.0.1",
+  "description": "This is a collection of plugins for Better Auth that were built by Nexirift with the intention of being used with Cosmos.",
+  "author": "Nexirift",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "module": "src/index.ts",
+  "scripts": {
+    "build": "bunx unbuild",
+    "prepack": "bunx unbuild"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "eslint": "^9.23.0",
+    "eslint-plugin-autofix": "^2.2.0",
+    "eslint-plugin-import": "^2.31.0",
+    "typescript": "^5",
+    "typescript-eslint": "^8.28.0",
+    "unbuild": "^3.5.0"
+  },
+  "peerDependencies": {
+    "better-auth": "^1.2.6-beta.3",
+    "zod": "^3.24.2"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**"
+  ]
+}
