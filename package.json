@@ -7,6 +7,7 @@
   "type": "module",
   "module": "src/index.ts",
   "scripts": {
+    "switch-registry": "chmod +x ./npm-scripts/switch-registry.sh && ./npm-scripts/switch-registry.sh",
     "build": "bunx unbuild",
     "prepack": "bunx unbuild"
   },
