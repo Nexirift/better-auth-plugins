@@ -18,7 +18,19 @@ export const MAX_INVITATIONS = 3;
 export const generateInviteCode = () =>
   `nexirift-${Math.random().toString(36).substring(2, 7)}-${Math.random().toString(36).substring(2, 7)}`;
 
-export const invitation = () => {
+/**
+ * Configuration options for the invitation plugin
+ */
+export interface InvitationOptions {
+  bypassCode?: string;
+  schema?: {
+    invitation?: {
+      modelName: string;
+    };
+  };
+}
+
+export const invitation = <O extends InvitationOptions>(options?: O) => {
   const ERROR_CODES = {
     UNAUTHORIZED: "You must be logged in to create an invitation",
     MAX_INVITATIONS_REACHED: "You have already created 3 invitations",
@@ -368,26 +380,41 @@ export const invitation = () => {
         {
           matcher: (context) => context.path === "/sign-up/email",
           handler: createAuthMiddleware(async (ctx) => {
-            if (!ctx.body?.invitation) {
-              throw new APIError("BAD_REQUEST", {
-                message: ERROR_CODES.INVITE_CODE_REQUIRED,
-              });
+            if (ctx.body.invitation === options?.bypassCode) {
+              // we bypass the invitation code
+              return { context: ctx };
             }
 
-            const inviteCode = ctx.body.invitation.trim();
-            const invitation = await ctx.context.adapter.findOne<Invitation>({
-              model: "invitation",
-              where: [{ field: "code", operator: "eq", value: inviteCode }],
-            });
+            try {
+              if (!ctx.body?.invitation) {
+                throw new APIError("BAD_REQUEST", {
+                  message: ERROR_CODES.INVITE_CODE_REQUIRED,
+                });
+              }
 
-            if (!invitation || invitation.userId) {
-              throw new APIError("BAD_REQUEST", {
-                message: ERROR_CODES.INVALID_INVITE_CODE,
+              const inviteCode = ctx.body.invitation.trim();
+              const invitation = await ctx.context.adapter.findOne<Invitation>({
+                model: "invitation",
+                where: [{ field: "code", operator: "eq", value: inviteCode }],
               });
-            }
 
-            ctx.body.fullInvitation = invitation;
-            return { context: ctx };
+              if (!invitation || invitation.userId) {
+                throw new APIError("BAD_REQUEST", {
+                  message: ERROR_CODES.INVALID_INVITE_CODE,
+                });
+              }
+
+              ctx.body.fullInvitation = invitation;
+              return { context: ctx };
+            } catch (error) {
+              if (!(error instanceof APIError)) {
+                throw new APIError("INTERNAL_SERVER_ERROR", {
+                  message: ERROR_CODES.PROCESS_FAILED,
+                  cause: error,
+                });
+              }
+              throw error;
+            }
           }),
         },
       ],
@@ -395,6 +422,11 @@ export const invitation = () => {
         {
           matcher: (context) => context.path === "/sign-up/email",
           handler: createAuthMiddleware(async (ctx) => {
+            if (ctx.body.invitation === options?.bypassCode) {
+              // we bypass the invitation code
+              return { context: ctx };
+            }
+
             try {
               const { email, fullInvitation } = ctx.body;
               const invitationId = fullInvitation.id;
