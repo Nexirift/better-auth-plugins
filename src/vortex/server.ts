@@ -82,9 +82,7 @@ export interface VortexOptions {
   /**
    * Custom permissions for roles.
    */
-  roles?: {
-    [key in string]?: Role<BAS>;
-  };
+  roles?: Record<string, Role<BAS>>;
 
   schema?: {
     violation?: {
@@ -234,7 +232,7 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
       },
     },
     dispute: {
-      modelName: opts.schema?.dispute?.modelName,
+      modelName: opts.schema?.dispute?.modelName ?? "violationDispute",
       fields: {
         violationId: {
           type: "string",
@@ -1181,5 +1179,6 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
         },
       ),
     },
+    $ERROR_CODES: VORTEX_ERROR_CODES,
   } satisfies BetterAuthPlugin;
 };

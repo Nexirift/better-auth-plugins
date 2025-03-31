@@ -12,8 +12,7 @@ import { createAuthMiddleware } from "better-auth/plugins";
 import { z } from "zod";
 import type { Invitation } from "./schema";
 import { schema } from "./schema";
-
-export const MAX_INVITATIONS = 3;
+import { INVITATION_ERROR_CODES } from "./error-codes";
 
 export const generateInviteCode = () =>
   `nexirift-${Math.random().toString(36).substring(2, 7)}-${Math.random().toString(36).substring(2, 7)}`;
@@ -23,6 +22,7 @@ export const generateInviteCode = () =>
  */
 export interface InvitationOptions {
   bypassCode?: string;
+  maxInvitations?: number;
   schema?: {
     invitation?: {
       modelName: string;
@@ -31,29 +31,13 @@ export interface InvitationOptions {
 }
 
 export const invitation = <O extends InvitationOptions>(options?: O) => {
-  const ERROR_CODES = {
-    UNAUTHORIZED: "You must be logged in to create an invitation",
-    MAX_INVITATIONS_REACHED: "You have already created 3 invitations",
-    INVITATION_FAILED: "Failed to create invitation",
-    INVITE_CODE_REQUIRED: "You must provide an invite code for the alpha stage",
-    INVALID_INVITE_CODE: "Invalid or already used invitation code",
-    UPDATE_USER_FAILED: "Failed to update user with invitation",
-    INVITATION_ALREADY_USED: "Invitation has been used by someone else",
-    PROCESS_FAILED: "Failed to process invitation",
-    INVITATION_NOT_FOUND: "Invitation not found",
-    REVOKE_UNAUTHORIZED: "You can only revoke invitations you created",
-    REVOKE_FAILED: "Failed to revoke invitation",
-    INVITATION_ALREADY_USED_CANT_REVOKE:
-      "Cannot revoke an invitation that has already been used",
-    FETCH_INVITES_FAILED: "Failed to fetch your invitations",
-    GET_INVITATION_FAILED: "Failed to retrieve invitation",
-  };
+  const maxInvitations = options?.maxInvitations ?? 3;
 
   const validateSession = async (ctx: GenericEndpointContext) => {
     const session = await getSessionFromCtx(ctx);
     if (!session?.user) {
       throw new APIError("UNAUTHORIZED", {
-        message: ERROR_CODES.UNAUTHORIZED,
+        message: INVITATION_ERROR_CODES.UNAUTHORIZED,
       });
     }
     return session.user;
@@ -105,9 +89,9 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
             ],
           });
 
-          if (invitations.length >= MAX_INVITATIONS) {
+          if (invitations.length >= maxInvitations) {
             throw new APIError("FORBIDDEN", {
-              message: ERROR_CODES.MAX_INVITATIONS_REACHED,
+              message: INVITATION_ERROR_CODES.MAX_INVITATIONS_REACHED,
             });
           }
 
@@ -124,7 +108,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
           if (!invitation) {
             throw new APIError("INTERNAL_SERVER_ERROR", {
-              message: ERROR_CODES.INVITATION_FAILED,
+              message: INVITATION_ERROR_CODES.INVITATION_FAILED,
             });
           }
 
@@ -191,7 +175,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
             if (!invitation) {
               throw new APIError("NOT_FOUND", {
-                message: ERROR_CODES.INVITATION_NOT_FOUND,
+                message: INVITATION_ERROR_CODES.INVITATION_NOT_FOUND,
               });
             }
 
@@ -204,7 +188,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
             if (!creator) {
               throw new APIError("NOT_FOUND", {
-                message: ERROR_CODES.INVITATION_NOT_FOUND,
+                message: INVITATION_ERROR_CODES.INVITATION_NOT_FOUND,
               });
             }
 
@@ -217,7 +201,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
           } catch (error) {
             if (!(error instanceof APIError)) {
               throw new APIError("INTERNAL_SERVER_ERROR", {
-                message: ERROR_CODES.GET_INVITATION_FAILED,
+                message: INVITATION_ERROR_CODES.GET_INVITATION_FAILED,
                 cause: error,
               });
             }
@@ -275,7 +259,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
             return ctx.json({ invitations });
           } catch (error) {
             throw new APIError("INTERNAL_SERVER_ERROR", {
-              message: ERROR_CODES.FETCH_INVITES_FAILED,
+              message: INVITATION_ERROR_CODES.FETCH_INVITES_FAILED,
               cause: error,
             });
           }
@@ -339,19 +323,20 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
           if (!invitation) {
             throw new APIError("NOT_FOUND", {
-              message: ERROR_CODES.INVITATION_NOT_FOUND,
+              message: INVITATION_ERROR_CODES.INVITATION_NOT_FOUND,
             });
           }
 
           // if (invitation.creatorId !== user.id) {
           //   throw new APIError("FORBIDDEN", {
-          //     message: ERROR_CODES.REVOKE_UNAUTHORIZED,
+          //     message: INVITATION_ERROR_CODES.REVOKE_UNAUTHORIZED,
           //   });
           // }
 
           if (invitation.userId) {
             throw new APIError("BAD_REQUEST", {
-              message: ERROR_CODES.INVITATION_ALREADY_USED_CANT_REVOKE,
+              message:
+                INVITATION_ERROR_CODES.INVITATION_ALREADY_USED_CANT_REVOKE,
             });
           }
 
@@ -367,7 +352,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
           if (stillExists) {
             throw new APIError("INTERNAL_SERVER_ERROR", {
-              message: ERROR_CODES.REVOKE_FAILED,
+              message: INVITATION_ERROR_CODES.REVOKE_FAILED,
             });
           }
 
@@ -388,7 +373,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
             try {
               if (!ctx.body?.invitation) {
                 throw new APIError("BAD_REQUEST", {
-                  message: ERROR_CODES.INVITE_CODE_REQUIRED,
+                  message: INVITATION_ERROR_CODES.INVITE_CODE_REQUIRED,
                 });
               }
 
@@ -400,7 +385,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
               if (!invitation || invitation.userId) {
                 throw new APIError("BAD_REQUEST", {
-                  message: ERROR_CODES.INVALID_INVITE_CODE,
+                  message: INVITATION_ERROR_CODES.INVALID_INVITE_CODE,
                 });
               }
 
@@ -409,7 +394,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
             } catch (error) {
               if (!(error instanceof APIError)) {
                 throw new APIError("INTERNAL_SERVER_ERROR", {
-                  message: ERROR_CODES.PROCESS_FAILED,
+                  message: INVITATION_ERROR_CODES.PROCESS_FAILED,
                   cause: error,
                 });
               }
@@ -441,7 +426,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
               if (!user) {
                 throw new APIError("INTERNAL_SERVER_ERROR", {
-                  message: ERROR_CODES.UPDATE_USER_FAILED,
+                  message: INVITATION_ERROR_CODES.UPDATE_USER_FAILED,
                 });
               }
 
@@ -456,13 +441,13 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
               if (!invitation) {
                 throw new APIError("CONFLICT", {
-                  message: ERROR_CODES.INVITATION_ALREADY_USED,
+                  message: INVITATION_ERROR_CODES.INVITATION_ALREADY_USED,
                 });
               }
             } catch (error) {
               if (!(error instanceof APIError)) {
                 throw new APIError("INTERNAL_SERVER_ERROR", {
-                  message: ERROR_CODES.PROCESS_FAILED,
+                  message: INVITATION_ERROR_CODES.PROCESS_FAILED,
                   cause: error,
                 });
               }
@@ -472,6 +457,6 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
         },
       ],
     },
-    $ERROR_CODES: ERROR_CODES,
+    $ERROR_CODES: INVITATION_ERROR_CODES,
   } satisfies BetterAuthPlugin;
 };

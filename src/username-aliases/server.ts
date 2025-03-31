@@ -1,22 +1,27 @@
 import type { BetterAuthPlugin, User } from "better-auth";
-import { APIError } from "better-auth/api";
+import { APIError, getSessionFromCtx } from "better-auth/api";
 import { createAuthMiddleware } from "better-auth/plugins";
+import { schema } from "./schema";
+import { USERNAME_ALIASES_ERROR_CODES } from "./error-codes";
 
-export const usernameAliases = () =>
-  ({
+/**
+ * Configuration options for the username aliases plugin
+ */
+export interface UsernameAliasesOptions {
+  maxUsernameAliases?: number;
+  // eslint-disable-next-line autofix/no-unused-vars
+  isUserAllowedToHaveAlias?: (user: User) => boolean | Promise<boolean>;
+}
+
+export const usernameAliases = <O extends UsernameAliasesOptions>(
+  options?: O,
+) => {
+  const maxUsernameAliases = options?.maxUsernameAliases ?? 3;
+  const isUserAllowedToHaveAlias =
+    options?.isUserAllowedToHaveAlias ?? ((user) => user.id !== "1");
+  return {
     id: "username-aliases",
-    schema: {
-      user: {
-        fields: {
-          usernameAliases: {
-            type: "string",
-            required: false,
-            unique: false,
-            references: undefined,
-          },
-        },
-      },
-    },
+    schema,
     hooks: {
       before: [
         {
@@ -29,6 +34,45 @@ export const usernameAliases = () =>
 
             if (!username && !usernameAliases) {
               return { context: ctx };
+            }
+
+            if (usernameAliases) {
+              const session = await getSessionFromCtx(ctx);
+              if (session?.user.id) {
+                // Get existing aliases for the current user
+                const currentUser = await ctx.context.adapter.findOne<
+                  User & { usernameAliases: string[] }
+                >({
+                  model: "user",
+                  where: [
+                    {
+                      field: "id",
+                      operator: "eq",
+                      value: session.user.id,
+                    },
+                  ],
+                });
+
+                if (
+                  !currentUser ||
+                  !(await isUserAllowedToHaveAlias(currentUser))
+                ) {
+                  throw new APIError("FORBIDDEN", {
+                    message: USERNAME_ALIASES_ERROR_CODES.USER_NOT_ALLOWED,
+                  });
+                }
+
+                const existingAliasCount =
+                  currentUser?.usernameAliases?.length || 0;
+                const newAliasCount = usernameAliases.length;
+
+                if (existingAliasCount + newAliasCount > maxUsernameAliases) {
+                  throw new APIError("UNPROCESSABLE_ENTITY", {
+                    message:
+                      USERNAME_ALIASES_ERROR_CODES.MAX_USERNAME_ALIASES_REACHED,
+                  });
+                }
+              }
             }
 
             if (username) {
@@ -48,7 +92,7 @@ export const usernameAliases = () =>
               if (existing) {
                 throw new APIError("UNPROCESSABLE_ENTITY", {
                   message:
-                    "Username is already taken as an alias. Please try another.",
+                    USERNAME_ALIASES_ERROR_CODES.USERNAME_ALREADY_TAKEN_AS_ALIAS,
                 });
               }
             }
@@ -70,7 +114,7 @@ export const usernameAliases = () =>
               if (existing) {
                 throw new APIError("UNPROCESSABLE_ENTITY", {
                   message:
-                    "Username alias is already taken. Please try another.",
+                    USERNAME_ALIASES_ERROR_CODES.USERNAME_ALIAS_ALREADY_TAKEN,
                 });
               }
             }
@@ -80,4 +124,6 @@ export const usernameAliases = () =>
         },
       ],
     },
-  }) satisfies BetterAuthPlugin;
+    $ERROR_CODES: USERNAME_ALIASES_ERROR_CODES,
+  } satisfies BetterAuthPlugin;
+};

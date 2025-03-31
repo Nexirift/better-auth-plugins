@@ -1,16 +1,22 @@
 import type { BetterAuthPlugin } from "better-auth";
 import { APIError } from "better-auth/api";
 import { createAuthMiddleware } from "better-auth/plugins";
+import { BIRTHDAY_ERROR_CODES } from "./error-codes";
 import { schema } from "./schema";
 
-export interface User {
-  birthday?: string;
+/**
+ * Configuration options for the invitation plugin
+ */
+export interface BirthdayOptions {
+  minimumAge?: number;
 }
 
-export const birthday = () =>
-  ({
+export const birthday = <O extends BirthdayOptions>(options?: O) => {
+  const minimumAge = options?.minimumAge ?? 13;
+
+  return {
     id: "birthday",
-    schema: schema,
+    schema,
     hooks: {
       before: [
         {
@@ -31,18 +37,20 @@ export const birthday = () =>
 
               const adjustedAge = hasBirthdayOccurredThisYear ? age : age - 1;
 
-              if (adjustedAge < 13) {
+              if (adjustedAge < minimumAge) {
                 throw new APIError("BAD_REQUEST", {
-                  message: "You must be at least 13 years old",
+                  message: BIRTHDAY_ERROR_CODES.MINIMUM_AGE_NOT_MET,
                 });
               }
             } else {
               throw new APIError("BAD_REQUEST", {
-                message: "You must provide a birthday",
+                message: BIRTHDAY_ERROR_CODES.BIRTHDAY_REQUIRED,
               });
             }
           }),
         },
       ],
     },
-  }) satisfies BetterAuthPlugin;
+    $ERROR_CODES: BIRTHDAY_ERROR_CODES,
+  } satisfies BetterAuthPlugin;
+};
