@@ -1,4 +1,5 @@
 import type {
+  AuthPluginSchema,
   BetterAuthPlugin,
   GenericEndpointContext,
   User,
@@ -10,9 +11,8 @@ import {
 } from "better-auth/api";
 import { createAuthMiddleware } from "better-auth/plugins";
 import { z } from "zod";
-import type { Invitation } from "./schema";
-import { schema } from "./schema";
 import { INVITATION_ERROR_CODES } from "./error-codes";
+import type { Invitation } from "./schema";
 
 export const generateInviteCode = () =>
   `nexirift-${Math.random().toString(36).substring(2, 7)}-${Math.random().toString(36).substring(2, 7)}`;
@@ -42,6 +42,55 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
     }
     return session.user;
   };
+
+  const schema = {
+    user: {
+      fields: {
+        invitation: {
+          type: "string",
+          required: false,
+          unique: true,
+          returned: true,
+        },
+      },
+    },
+    nexiriftInvitation: {
+      modelName: options?.schema?.invitation?.modelName,
+      fields: {
+        code: {
+          type: "string",
+          required: true,
+          unique: true,
+        },
+        creatorId: {
+          type: "string",
+          required: true,
+          references: {
+            model: "user",
+            field: "id",
+            onDelete: "cascade",
+          },
+        },
+        userId: {
+          type: "string",
+          required: false,
+          references: {
+            model: "user",
+            field: "id",
+            onDelete: "cascade",
+          },
+        },
+        createdAt: {
+          type: "date",
+          required: true,
+        },
+        updatedAt: {
+          type: "date",
+          required: true,
+        },
+      },
+    },
+  } satisfies AuthPluginSchema;
 
   return {
     id: "invitation",
