@@ -79,7 +79,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
           const user = await validateSession(ctx);
 
           const invitations = await ctx.context.adapter.findMany<Invitation>({
-            model: "invitation",
+            model: "nexiriftInvitation",
             where: [
               {
                 field: "creatorId",
@@ -97,7 +97,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
           const now = new Date();
           const invitation = await ctx.context.adapter.create<Invitation>({
-            model: "invitation",
+            model: "nexiriftInvitation",
             data: {
               code: generateInviteCode(),
               creatorId: user.id,
@@ -162,13 +162,13 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
           try {
             let invitation = await ctx.context.adapter.findOne<Invitation>({
-              model: "invitation",
+              model: "nexiriftInvitation",
               where: [{ field: "code", operator: "eq", value: invitationId }],
             });
 
             if (!invitation) {
               invitation = await ctx.context.adapter.findOne<Invitation>({
-                model: "invitation",
+                model: "nexiriftInvitation",
                 where: [{ field: "id", operator: "eq", value: invitationId }],
               });
             }
@@ -246,7 +246,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
           try {
             const invitations = await ctx.context.adapter.findMany<Invitation>({
-              model: "invitation",
+              model: "nexiriftInvitation",
               where: [
                 {
                   field: "creatorId",
@@ -317,7 +317,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
           const { invitationId } = ctx.body;
 
           const invitation = await ctx.context.adapter.findOne<Invitation>({
-            model: "invitation",
+            model: "nexiriftInvitation",
             where: [{ field: "id", operator: "eq", value: invitationId }],
           });
 
@@ -341,12 +341,12 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
           }
 
           await ctx.context.adapter.delete({
-            model: "invitation",
+            model: "nexiriftInvitation",
             where: [{ field: "id", operator: "eq", value: invitationId }],
           });
 
           const stillExists = await ctx.context.adapter.findOne<Invitation>({
-            model: "invitation",
+            model: "nexiriftInvitation",
             where: [{ field: "id", operator: "eq", value: invitationId }],
           });
 
@@ -379,7 +379,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
 
               const inviteCode = ctx.body.invitation.trim();
               const invitation = await ctx.context.adapter.findOne<Invitation>({
-                model: "invitation",
+                model: "nexiriftInvitation",
                 where: [{ field: "code", operator: "eq", value: inviteCode }],
               });
 
@@ -431,7 +431,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
               }
 
               const invitation = await ctx.context.adapter.update<Invitation>({
-                model: "invitation",
+                model: "nexiriftInvitation",
                 where: [{ field: "id", operator: "eq", value: invitationId }],
                 update: {
                   userId: user.id,

@@ -28,7 +28,7 @@ export const schema = {
       },
     },
   },
-  invitation: {
+  nexiriftInvitation: {
     fields: {
       code: {
         type: "string",
