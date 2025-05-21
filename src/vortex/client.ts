@@ -6,7 +6,6 @@ export const vortexClient = () => {
     id: "vortex",
     $InferServerPlugin: {} as ReturnType<typeof vortex>,
     pathMethods: {
-      "/vortex/test": "POST",
       "/vortex/create-violation": "POST",
       "/vortex/list-violations": "GET",
       "/vortex/update-violation": "POST",

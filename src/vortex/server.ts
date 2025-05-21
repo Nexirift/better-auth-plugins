@@ -5,7 +5,6 @@ import type {
   Session,
   Where,
 } from "better-auth";
-import { generateId } from "better-auth";
 import {
   APIError,
   createAuthEndpoint,
@@ -468,7 +467,6 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
             const violation = await ctx.context.adapter.create<Violation>({
               model: "violation",
               data: {
-                id: generateId(),
                 content: ctx.body.content,
                 publicComment: ctx.body.publicComment,
                 internalNote: ctx.body.internalNote,
@@ -628,15 +626,18 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
                     operator: "eq",
                     value: ctx.body.id,
                   },
-                  {
-                    field: "amStatus",
-                    operator: "ne",
-                    value: "rejected",
-                  },
+                  // {
+                  //   field: "amStatus",
+                  //   operator: "ne",
+                  //   value: "rejected",
+                  // },
                 ],
               });
 
-            if (!existingViolation) {
+            if (
+              !existingViolation ||
+              existingViolation.amStatus !== "approved"
+            ) {
               throw new APIError("NOT_FOUND", {
                 message: VORTEX_ERROR_CODES.VIOLATION_NOT_FOUND,
                 code: "VIOLATION_NOT_FOUND",
@@ -700,11 +701,12 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
                 operator: "eq",
                 value: userId,
               },
-              {
-                field: "amStatus",
-                operator: "ne",
-                value: "rejected",
-              },
+              // not implemented in better-auth yet :(
+              // {
+              //   field: "amStatus",
+              //   operator: "ne",
+              //   value: "rejected",
+              // },
             ];
 
             // Get violations with pagination and sorting
@@ -717,15 +719,22 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
             });
 
             // Filter out internal fields and parse applicable rules
-            const filteredViolations = violations.map((violation) => {
-              const { ...rest } = violation;
-              return {
-                ...rest,
-                applicableRules: JSON.parse(
-                  violation.applicableRules as string,
-                ),
-              };
-            }) as Violation[];
+            const filteredViolations = violations
+              .filter((violation) => violation.amStatus === "approved")
+              .map((violation) => {
+                const filtered = {
+                  ...violation,
+                  applicableRules: JSON.parse(
+                    violation.applicableRules as string,
+                  ),
+                };
+                delete filtered.internalNote;
+                delete filtered.moderatorId;
+                delete filtered.lastUpdatedBy;
+                delete filtered.amStatus;
+                delete filtered.amMetadata;
+                return filtered;
+              }) as Violation[];
 
             const total = await ctx.context.adapter.count({
               model: "violation",
@@ -794,15 +803,16 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
                   operator: "eq",
                   value: ctx.context.session.user.id,
                 },
-                {
-                  field: "amStatus",
-                  operator: "ne",
-                  value: "rejected",
-                },
+                // not implemented in better-auth yet :(
+                // {
+                //   field: "amStatus",
+                //   operator: "ne",
+                //   value: "rejected",
+                // },
               ],
             });
 
-            if (!violation) {
+            if (!violation || violation.amStatus !== "approved") {
               throw new APIError("NOT_FOUND", {
                 message: VORTEX_ERROR_CODES.VIOLATION_NOT_FOUND,
                 code: "VIOLATION_NOT_FOUND",
@@ -842,7 +852,6 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
             const dispute = await ctx.context.adapter.create<Dispute>({
               model: "dispute",
               data: {
-                id: generateId(),
                 violationId: ctx.body.violationId,
                 userId: ctx.context.session.user.id,
                 reason: ctx.body.reason,
@@ -1135,13 +1144,17 @@ export const vortex = <O extends VortexOptions>(options?: O) => {
                       operator: "eq",
                       value: dispute.violationId,
                     },
-                    {
-                      field: "amStatus",
-                      operator: "ne",
-                      value: "rejected",
-                    },
+                    // not implemented in better-auth yet :(
+                    // {
+                    //   field: "amStatus",
+                    //   operator: "ne",
+                    //   value: "rejected",
+                    // },
                   ],
                 });
+                if (!violation || violation.amStatus !== "approved") {
+                  return null;
+                }
                 return {
                   ...dispute,
                   violation: violation

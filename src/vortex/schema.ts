@@ -13,9 +13,10 @@ export const violationSchema = z.object({
   userId: z.string().optional(),
   expiresAt: z.date().optional(),
   createdAt: z.date().default(new Date()),
-  lastUpdatedBy: z.string(),
+  lastUpdatedBy: z.string().optional(),
   updatedAt: z.date().default(new Date()),
-  am_status: z.string().default("").optional(),
+  amStatus: z.string().default("").optional(),
+  amMetadata: z.string().optional(),
 });
 
 export type Violation = z.infer<typeof violationSchema>;
