@@ -432,7 +432,10 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
                 where: [{ field: "code", operator: "eq", value: inviteCode }],
               });
 
-              if (!invitation || invitation.userId) {
+              if (
+                !invitation ||
+                (invitation.userId && invitation.userId !== "null")
+              ) {
                 throw new APIError("BAD_REQUEST", {
                   message: INVITATION_ERROR_CODES.INVALID_INVITE_CODE,
                 });
