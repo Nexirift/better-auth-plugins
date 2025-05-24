@@ -459,6 +459,15 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
         {
           matcher: (context) => context.path === "/sign-up/email",
           handler: createAuthMiddleware(async (ctx) => {
+            // this is required when using the haveibeenpwned plugin
+            if (
+              ctx.context.options.plugins?.find(
+                (e) => e.id === "haveIBeenPwned",
+              )
+            ) {
+              await ctx.context.password.hash(ctx.body.password);
+            }
+
             if (ctx.body.invitation === options?.bypassCode) {
               // we bypass the invitation code
               return { context: ctx };
