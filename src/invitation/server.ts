@@ -382,7 +382,7 @@ export const invitation = <O extends InvitationOptions>(options?: O) => {
           //   });
           // }
 
-          if (invitation.userId) {
+          if (invitation.userId && invitation.userId !== "null") {
             throw new APIError("BAD_REQUEST", {
               message:
                 INVITATION_ERROR_CODES.INVITATION_ALREADY_USED_CANT_REVOKE,
