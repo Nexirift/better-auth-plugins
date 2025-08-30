@@ -28,6 +28,7 @@ jobs:
         image: node:20-slim
         interpreter: !DefaultInterpreter
           commands: |
+            export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
             corepack enable
 
             # Install the packages
