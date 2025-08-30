@@ -1,4 +1,4 @@
-version: 39
+version: 40
 jobs:
   - name: Pull from GitHub
     steps:
@@ -8,7 +8,8 @@ jobs:
         refs: refs/heads/* refs/tags/*
         withLfs: true
         force: true
-        condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+        condition: SUCCESSFUL
+        optional: false
     retryCondition: never
     maxRetries: 3
     retryDelay: 30
@@ -21,18 +22,37 @@ jobs:
         withLfs: true
         withSubmodules: true
         cloneDepth: 1
-        condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+        condition: SUCCESSFUL
+        optional: false
+      - !GenerateChecksumStep
+        name: checksum
+        files: package.json pnpm-lock.yaml
+        targetFile: checksum
+        condition: SUCCESSFUL
+        optional: false
+      - !SetupCacheStep
+        name: cache
+        key: node_modules_@file:checksum@
+        loadKeys:
+          - node_modules
+        paths:
+          - node_modules
+        uploadStrategy: UPLOAD_IF_NOT_HIT
+        condition: SUCCESSFUL
+        optional: false
       - !CommandStep
         name: publish
         runInContainer: true
         image: node:20-slim
         interpreter: !DefaultInterpreter
           commands: |
+            # Enable corepack
+            export CI=true
             export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
             corepack enable
 
             # Install the packages
-            pnpm i
+            pnpm i --frozen-lockfile
 
             # Use @@ to reference scope in job commands to avoid being interpreted as variable
             npm config set @@nexirift:registry https://code.nexirift.com/dev/~npm/
@@ -52,7 +72,8 @@ jobs:
             userName: admin
             passwordSecret: access-token
         useTTY: true
-        condition: ALL_PREVIOUS_STEPS_WERE_SUCCESSFUL
+        condition: SUCCESSFUL
+        optional: false
     triggers:
       - !BranchUpdateTrigger {}
     retryCondition: never
